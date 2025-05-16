@@ -37,6 +37,7 @@ export default async function Home() {
             {projects.map((project) => (
               <ProjectCard
                 key={project.id}
+                id={project.id}
                 title={project.title}
                 description={project.description}
                 image={

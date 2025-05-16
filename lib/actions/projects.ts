@@ -154,7 +154,7 @@ export async function checkStorageBucket(): Promise<{
 
   try {
     // Intenta listar archivos en el bucket
-    const { data, error } = await supabase.storage.from(BUCKET_NAME).list('');
+    const { data, error } = await supabase.storage.from(BUCKET_NAME).list("");
     if (error) {
       return { exists: false, error: error.message };
     }
@@ -202,5 +202,82 @@ export async function uploadProjectImage(file: File): Promise<string> {
     throw err instanceof Error
       ? err
       : new Error("Error desconocido al subir la imagen");
+  }
+}
+
+export async function getProjectById(id: string) {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select(
+      "*, technologies:project_technologies(technology:technologies(name))"
+    )
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return {
+    ...data,
+    technologies: data.technologies?.map((t: any) => t.technology) ?? [],
+  };
+}
+
+export async function updateProject(id: string, updates: any) {
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("projects")
+    .update(updates)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateProjectTechnologies(
+  projectId: string,
+  technologies: string[]
+) {
+  const supabase = createServerSupabaseClient();
+
+  // 1. Elimina las relaciones actuales
+  await supabase
+    .from("project_technologies")
+    .delete()
+    .eq("project_id", projectId);
+
+  if (technologies.length === 0) return;
+
+  // 2. Busca los IDs de las tecnologías por nombre
+  const { data: techRows, error } = await supabase
+    .from("technologies")
+    .select("id, name")
+    .in("name", technologies);
+
+  if (error) throw error;
+
+  // 3. Encuentra las tecnologías que faltan
+  const existingNames = techRows.map((t) => t.name);
+  const missingNames = technologies.filter((name) => !existingNames.includes(name));
+
+  // 4. Inserta las tecnologías faltantes
+  let newTechRows: { id: string; name: string }[] = [];
+  if (missingNames.length > 0) {
+    const { data: newTechs, error: insertError } = await supabase
+      .from("technologies")
+      .insert(missingNames.map((name) => ({ name })))
+      .select("id, name");
+
+    if (insertError) throw insertError;
+    newTechRows = newTechs;
+  }
+
+  // 5. Junta todas las tecnologías (viejas y nuevas)
+  const allTechs = [...techRows, ...newTechRows];
+
+  // 6. Inserta las nuevas relaciones usando technology_id
+  const inserts = allTechs.map((tech) => ({
+    project_id: projectId,
+    technology_id: tech.id,
+  }));
+
+  if (inserts.length > 0) {
+    await supabase.from("project_technologies").insert(inserts);
   }
 }

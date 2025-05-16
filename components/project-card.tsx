@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Github, MoreVertical } from "lucide-react";
+import { ExternalLink, Github, MoreVertical, Pencil } from "lucide-react";
 
 interface ProjectCardProps {
+  id: string;
   title: string;
   description: string;
   image: string;
@@ -20,6 +21,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({
+  id,
   title,
   description,
   image,
@@ -76,6 +78,17 @@ export function ProjectCard({
             </Button>
           </Link>
         )}
+        {/* Botón de editar */}
+        <Link href={`/editar-proyecto/${id}`}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   );
