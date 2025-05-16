@@ -153,29 +153,16 @@ export async function checkStorageBucket(): Promise<{
   const BUCKET_NAME = "project-images";
 
   try {
-    // Listar todos los buckets para verificar si existe
-    const { data: buckets, error: listError } =
-      await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.error("Error al listar buckets:", listError);
-      return {
-        exists: false,
-        error: `Error al verificar buckets: ${listError.message}`,
-      };
+    // Intenta listar archivos en el bucket
+    const { data, error } = await supabase.storage.from(BUCKET_NAME).list('');
+    if (error) {
+      return { exists: false, error: error.message };
     }
-
-    // Verificar si el bucket ya existe
-    const bucketExists = buckets?.some((bucket) => bucket.name === BUCKET_NAME);
-
-    return { exists: bucketExists };
+    return { exists: true };
   } catch (err) {
-    console.error("Error inesperado:", err);
     return {
       exists: false,
-      error: `Error inesperado: ${
-        err instanceof Error ? err.message : "Desconocido"
-      }`,
+      error: err instanceof Error ? err.message : "Desconocido",
     };
   }
 }
@@ -186,24 +173,6 @@ export async function uploadProjectImage(file: File): Promise<string> {
   const BUCKET_NAME = "project-images";
 
   try {
-    // Verificar si el bucket existe
-    const { data: buckets, error: listError } =
-      await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.error("Error al listar buckets:", listError);
-      throw new Error(`Error al verificar buckets: ${listError.message}`);
-    }
-
-    // Verificar si el bucket existe
-    const bucketExists = buckets?.some((bucket) => bucket.name === BUCKET_NAME);
-
-    if (!bucketExists) {
-      throw new Error(
-        `El bucket '${BUCKET_NAME}' no existe. Por favor, créalo manualmente desde el panel de Supabase.`
-      );
-    }
-
     // Generar un nombre único para el archivo
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}-${Math.random()
@@ -220,7 +189,6 @@ export async function uploadProjectImage(file: File): Promise<string> {
       });
 
     if (error) {
-      console.error("Error al subir imagen:", error);
       throw new Error(`No se pudo subir la imagen: ${error.message}`);
     }
 
@@ -231,7 +199,6 @@ export async function uploadProjectImage(file: File): Promise<string> {
 
     return publicUrl;
   } catch (err) {
-    console.error("Error al subir imagen:", err);
     throw err instanceof Error
       ? err
       : new Error("Error desconocido al subir la imagen");
