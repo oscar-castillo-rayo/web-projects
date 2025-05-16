@@ -1,0 +1,82 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, Github, MoreVertical } from "lucide-react";
+
+interface ProjectCardProps {
+  title: string;
+  description: string;
+  image: string;
+  technologies: string[];
+  demoUrl?: string;
+  repoUrl?: string;
+}
+
+export function ProjectCard({
+  title,
+  description,
+  image,
+  technologies,
+  demoUrl,
+  repoUrl,
+}: ProjectCardProps) {
+  return (
+    <Card className="overflow-hidden flex flex-col h-full relative">
+      <div className="relative h-48 w-full">
+        <Image
+          src={image || "/placeholder.svg"}
+          alt={title}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+      <CardHeader>
+        <h3 className="text-xl font-bold">{title}</h3>
+      </CardHeader>
+      <CardContent className="flex-grow">
+        <p className="text-muted-foreground mb-4">{description}</p>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {technologies.map((tech: string) => (
+            <Badge key={tech} variant="secondary">
+              {tech}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter className="flex gap-2">
+        {demoUrl && (
+          <Link href={demoUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Demo
+            </Button>
+          </Link>
+        )}
+        {repoUrl && (
+          <Link href={repoUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Github className="h-4 w-4" />
+              Código
+            </Button>
+          </Link>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
