@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -8,7 +9,12 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Github, MoreVertical, Pencil } from "lucide-react";
+import { Pencil, ExternalLink } from "lucide-react";
+// Import GitHub icon from simple-icons or use a custom SVG
+import { SiGithub } from "react-icons/si";
+import Swal from "sweetalert2";
+import { supabase } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
   id: string;
@@ -18,6 +24,7 @@ interface ProjectCardProps {
   technologies: string[];
   demoUrl?: string;
   repoUrl?: string;
+  onDeleted?: (id: string) => void; // Para actualizar la lista en el padre
 }
 
 export function ProjectCard({
@@ -28,7 +35,43 @@ export function ProjectCard({
   technologies,
   demoUrl,
   repoUrl,
+  onDeleted,
 }: ProjectCardProps) {
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡Esta acción eliminará el proyecto permanentemente!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      // 1. Elimina la imagen del almacenamiento si existe
+      if (image) {
+        const match = image.match(/project-images\/([^?]+)/);
+        const filePath = match ? match[1] : null;
+        if (filePath) {
+          await supabase.storage.from("project-images").remove([filePath]);
+        }
+      }
+
+      // 2. Elimina el proyecto de la base de datos
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+
+      if (error) {
+        Swal.fire("Error", "No se pudo eliminar el proyecto", "error");
+      } else {
+        Swal.fire("Eliminado", "El proyecto fue eliminado", "success");
+        if (onDeleted) onDeleted(id); // Notifica al padre para quitar la card
+        router.refresh(); // Actualiza la lista de proyectos
+      }
+    }
+  };
+
   return (
     <Card className="overflow-hidden flex flex-col h-full relative">
       <div className="relative h-48 w-full">
@@ -53,7 +96,7 @@ export function ProjectCard({
           ))}
         </div>
       </CardContent>
-      <CardFooter className="flex gap-2">
+      <CardFooter className="flex justify-center gap-2">
         {demoUrl && (
           <Link href={demoUrl} target="_blank" rel="noopener noreferrer">
             <Button
@@ -68,27 +111,21 @@ export function ProjectCard({
         )}
         {repoUrl && (
           <Link href={repoUrl} target="_blank" rel="noopener noreferrer">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-            >
-              <Github className="h-4 w-4" />
+            <Button variant="outline" size="sm">
+              <SiGithub className="h-4 w-4" />
               Código
             </Button>
           </Link>
         )}
-        {/* Botón de editar */}
         <Link href={`/editar-proyecto/${id}`}>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex items-center gap-1"
-          >
+          <Button variant="secondary" size="sm">
             <Pencil className="h-4 w-4" />
             Editar
           </Button>
         </Link>
+        <Button className="h-9" variant="destructive" onClick={handleDelete}>
+          Eliminar
+        </Button>
       </CardFooter>
     </Card>
   );

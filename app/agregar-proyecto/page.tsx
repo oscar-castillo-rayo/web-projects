@@ -164,7 +164,7 @@ export default function AgregarProyecto() {
           <p>Verificando configuración de almacenamiento...</p>
         </div>
       ) : !bucketStatus.exists ? (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive" className="mb-2">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Configuración de almacenamiento requerida</AlertTitle>
           <AlertDescription>
@@ -197,7 +197,7 @@ export default function AgregarProyecto() {
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert className="mb-6 bg-green-50 border-green-200">
+        <Alert className="mb-2 bg-green-50 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertTitle className="text-green-600">
             Almacenamiento configurado correctamente
