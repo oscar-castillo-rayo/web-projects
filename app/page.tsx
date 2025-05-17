@@ -34,20 +34,24 @@ export default async function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                id={project.id}
-                title={project.title}
-                description={project.description}
-                image={
-                  project.image_url || "/placeholder.svg?height=300&width=400"
-                }
-                technologies={project.technologies.map((tech) => tech.name)}
-                demoUrl={project.demo_url || undefined}
-                repoUrl={project.repo_url || undefined}
-              />
-            ))}
+            {projects.map(
+              (project) =>
+                project.image_url ? (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    title={project.title}
+                    description={project.description}
+                    image={
+                      project.image_url ||
+                      "/placeholder.svg?height=300&width=400"
+                    }
+                    technologies={project.technologies.map((tech) => tech.name)}
+                    demoUrl={project.demo_url || undefined}
+                    repoUrl={project.repo_url || undefined}
+                  />
+                ) : null // o muestra un loader/placeholder
+            )}
           </div>
         )}
       </section>

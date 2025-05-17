@@ -168,19 +168,32 @@ export async function checkStorageBucket(): Promise<{
 }
 
 // Subir una imagen a Supabase Storage
-export async function uploadProjectImage(file: File): Promise<string> {
+export async function uploadProjectImage(
+  file: File,
+  previousImageUrl?: string
+): Promise<string> {
   const supabase = createServerSupabaseClient();
   const BUCKET_NAME = "project-images";
 
+  // 1. Elimina la imagen anterior si existe
+  if (previousImageUrl) {
+    console.log("Eliminando imagen anterior:", previousImageUrl);
+    // Extrae la ruta relativa al bucket después de 'project-images/'
+    const match = previousImageUrl.match(/project-images\/(.+)$/);
+    const filePath = match ? match[1] : null;
+    if (filePath) {
+      await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+    }
+  }
+
+  // 2. Sube la nueva imagen
   try {
-    // Generar un nombre único para el archivo
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2, 15)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    // Subir el archivo
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, file, {
@@ -192,7 +205,6 @@ export async function uploadProjectImage(file: File): Promise<string> {
       throw new Error(`No se pudo subir la imagen: ${error.message}`);
     }
 
-    // Obtener la URL pública
     const {
       data: { publicUrl },
     } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
@@ -254,7 +266,9 @@ export async function updateProjectTechnologies(
 
   // 3. Encuentra las tecnologías que faltan
   const existingNames = techRows.map((t) => t.name);
-  const missingNames = technologies.filter((name) => !existingNames.includes(name));
+  const missingNames = technologies.filter(
+    (name) => !existingNames.includes(name)
+  );
 
   // 4. Inserta las tecnologías faltantes
   let newTechRows: { id: string; name: string }[] = [];

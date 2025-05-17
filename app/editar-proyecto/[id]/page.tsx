@@ -22,7 +22,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
-  PlusCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/image-upload";
@@ -31,8 +30,11 @@ import {
   updateProject,
   checkStorageBucket,
   updateProjectTechnologies,
+  uploadProjectImage,
 } from "@/lib/actions/projects";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase/client";
 
 export default function EditarProyecto() {
   const router = useRouter();
@@ -43,10 +45,12 @@ export default function EditarProyecto() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [prevImageUrl, setPrevImageUrl] = useState<string | null>(null);
   const [demoUrl, setDemoUrl] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [technology, setTechnology] = useState("");
   const [technologies, setTechnologies] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Estado para el bucket de almacenamiento
   const [bucketStatus, setBucketStatus] = useState<{
@@ -64,7 +68,9 @@ export default function EditarProyecto() {
       const project = await getProjectById(id);
       setTitle(project.title || "");
       setDescription(project.description || "");
-      setImageUrl(project.image_url || "");
+      const imageUrlValue = project.image_url || "";
+      setImageUrl(imageUrlValue);
+      setPrevImageUrl(imageUrlValue || null); // Inicializa como null si no hay valor
       setDemoUrl(project.demo_url || "");
       setRepoUrl(project.repo_url || "");
       setTechnologies(project.technologies?.map((t: any) => t.name) || []);
@@ -112,26 +118,78 @@ export default function EditarProyecto() {
     setTechnologies(technologies.filter((t) => t !== tech));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileSelected = (file: File | null) => {
+    setSelectedFile(file);
+  };
+
+  // Función modificada para cambiar imagen
+  const handleChangeImage = () => {
+    // Si hay una URL de imagen actual, guárdala antes de borrarla
+    if (imageUrl) {
+      setPrevImageUrl(imageUrl);
+    }
+    // Limpia el imageUrl para mostrar el selector de archivo
+    setImageUrl("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!title || !description || !imageUrl) {
-      alert(
-        "Por favor, completa los campos obligatorios: título, descripción e imagen"
-      );
-      return;
-    }
+    let newImageUrl = imageUrl;
 
     startTransition(async () => {
-      await updateProject(id, {
-        title,
-        description,
-        image_url: imageUrl,
-        demo_url: demoUrl,
-        repo_url: repoUrl,
-      });
-      await updateProjectTechnologies(id, technologies);
-      router.push("/");
+      try {
+        // Si hay un archivo seleccionado, procesa la imagen
+        if (selectedFile) {
+          // 1. Eliminar imagen anterior si existe y prevImageUrl no es null
+          if (prevImageUrl) {
+            try {
+              const supabase = createServerSupabaseClient();
+              // Extraer el path de la imagen desde la URL
+              const match = prevImageUrl.match(/project-images\/([^?]+)/);
+              const filePath = match ? match[1] : null;
+
+              if (filePath) {
+                console.log("Eliminando archivo:", filePath);
+                const { error } = await supabase.storage
+                  .from("project-images")
+                  .remove([filePath]);
+
+                if (error) {
+                  console.error("Error al eliminar la imagen anterior:", error);
+                } else {
+                  console.log("Imagen anterior eliminada correctamente");
+                }
+              }
+            } catch (error) {
+              console.error("Error al interactuar con Supabase:", error);
+              // Continúa con el flujo aunque la eliminación falle
+            }
+          }
+
+          // 2. Subir nueva imagen
+          newImageUrl = await uploadProjectImage(selectedFile);
+          setImageUrl(newImageUrl);
+          setPrevImageUrl(null); // Resetea prevImageUrl después de guardar
+        }
+
+        // 3. Actualizar proyecto con todos los datos
+        await updateProject(id, {
+          title,
+          description,
+          image_url: newImageUrl,
+          demo_url: demoUrl,
+          repo_url: repoUrl,
+        });
+
+        // 4. Actualizar tecnologías
+        await updateProjectTechnologies(id, technologies);
+
+        // 5. Redireccionar
+        router.push("/");
+      } catch (error) {
+        console.error("Error al actualizar el proyecto:", error);
+      }
     });
   };
 
@@ -232,7 +290,10 @@ export default function EditarProyecto() {
               {bucketStatus.exists ? (
                 <>
                   {!imageUrl ? (
-                    <ImageUpload onImageUploaded={handleImageUploaded} />
+                    <ImageUpload
+                      value={imageUrl}
+                      onFileSelected={handleFileSelected}
+                    />
                   ) : (
                     <div className="flex flex-col gap-2">
                       <img
@@ -244,7 +305,7 @@ export default function EditarProyecto() {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setImageUrl("")}
+                          onClick={handleChangeImage}
                         >
                           Cambiar imagen
                         </Button>
@@ -345,7 +406,7 @@ export default function EditarProyecto() {
               isPending ||
               !title ||
               !description ||
-              !imageUrl ||
+              (!imageUrl && !selectedFile) || // <-- permite guardar si hay imagen previa o nueva seleccionada
               !bucketStatus.exists ||
               bucketStatus.checking
             }
@@ -361,6 +422,34 @@ export default function EditarProyecto() {
           </Button>
         </CardFooter>
       </Card>
+
+      <Button
+        type="button"
+        variant="destructive"
+        onClick={async () => {
+          if (imageUrl) {
+            const match = imageUrl.match(/project-images\/([^?]+)/);
+            const filePath = match ? match[1] : null;
+            if (filePath) {
+              const { error } = await supabase.storage
+                .from("project-images")
+                .remove([filePath]);
+              if (error) {
+                alert("Error al eliminar: " + error.message);
+              } else {
+                alert("Imagen eliminada correctamente");
+                setImageUrl("");
+              }
+            } else {
+              alert("No se pudo extraer el nombre del archivo.");
+            }
+          } else {
+            alert("No hay imagen para eliminar.");
+          }
+        }}
+      >
+        Probar eliminar imagen
+      </Button>
     </div>
   );
 }
