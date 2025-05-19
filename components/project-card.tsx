@@ -10,11 +10,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, ExternalLink } from "lucide-react";
-// Import GitHub icon from simple-icons or use a custom SVG
 import { SiGithub } from "react-icons/si";
 import Swal from "sweetalert2";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useProjectsStore } from "@/lib/stores/useProjectsStore";
+import { useEffect } from "react";
 
 interface ProjectCardProps {
   id: string;
@@ -24,7 +25,6 @@ interface ProjectCardProps {
   technologies: string[];
   demoUrl?: string;
   repoUrl?: string;
-  onDeleted?: (id: string) => void; // Para actualizar la lista en el padre
 }
 
 export function ProjectCard({
@@ -35,9 +35,9 @@ export function ProjectCard({
   technologies,
   demoUrl,
   repoUrl,
-  onDeleted,
 }: ProjectCardProps) {
   const router = useRouter();
+  const removeProject = useProjectsStore((state) => state.removeProject);
 
   const handleDelete = async () => {
     const result = await Swal.fire({
@@ -65,9 +65,15 @@ export function ProjectCard({
       if (error) {
         Swal.fire("Error", "No se pudo eliminar el proyecto", "error");
       } else {
-        Swal.fire("Eliminado", "El proyecto fue eliminado", "success");
-        if (onDeleted) onDeleted(id); // Notifica al padre para quitar la card
-        router.refresh(); // Actualiza la lista de proyectos
+        Swal.fire({
+          title: "Eliminado",
+          text: "El proyecto fue eliminado",
+          icon: "success",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        removeProject(id); // Elimina del estado global
+        router.refresh(); // Actualiza inmediatamente
       }
     }
   };
