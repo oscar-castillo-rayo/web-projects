@@ -1,3 +1,5 @@
+export const revalidate = 2;
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/project-card";
