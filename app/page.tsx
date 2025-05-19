@@ -1,12 +1,14 @@
+export const revalidate = 1;
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/project-card";
+import { PlusCircle } from "lucide-react";
 import { getProjects } from "@/lib/actions/projects";
 import { AddProjectButton } from "@/components/AddProjectButton";
 
 export default async function Home() {
-  // SSR: fetch siempre datos frescos
-  const projects = await getProjects({ cache: "no-store" });
+  const projects = await getProjects();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -27,24 +29,31 @@ export default async function Home() {
             </p>
             <Link href="/agregar-proyecto" className="mt-4 inline-block">
               <Button variant="outline" className="mt-2">
+                {/* <PlusCircle className="h-4 w-4 mr-2" /> */}
                 Agregar Proyecto
               </Button>
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                id={project.id}
-                title={project.title}
-                description={project.description}
-                image={project.image_url || "/placeholder.svg"}
-                technologies={project.technologies.map((tech) => tech.name)}
-                demoUrl={project.demo_url || undefined}
-                repoUrl={project.repo_url || undefined}
-              />
-            ))}
+            {projects.map(
+              (project) =>
+                project.image_url ? (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    title={project.title}
+                    description={project.description}
+                    image={
+                      project.image_url ||
+                      "/placeholder.svg?height=300&width=400"
+                    }
+                    technologies={project.technologies.map((tech) => tech.name)}
+                    demoUrl={project.demo_url || undefined}
+                    repoUrl={project.repo_url || undefined}
+                  />
+                ) : null // o muestra un loader/placeholder
+            )}
           </div>
         )}
       </section>

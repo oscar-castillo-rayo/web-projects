@@ -72,8 +72,8 @@ export function ProjectCard({
           showConfirmButton: false,
           timer: 1500,
         });
-        removeProject(id); // Elimina del estado global
-        router.refresh(); // Actualiza inmediatamente
+        removeProject(id);
+        router.replace("/");
       }
     }
   };
