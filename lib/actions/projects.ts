@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import type { ProjectWithTechnologies } from "@/lib/database.types";
 
 // Obtener todos los proyectos con sus tecnologías
-export async function getProjects(): Promise<ProjectWithTechnologies[]> {
+export async function getProjects(
+  options: { cache?: "no-store" } = {}
+): Promise<ProjectWithTechnologies[]> {
   const supabase = createServerSupabaseClient();
 
   // Obtener todos los proyectos
