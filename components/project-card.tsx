@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useProjectsStore } from "@/lib/stores/useProjectsStore";
 import { useEffect } from "react";
+import { revalidatePath } from "next/cache";
 
 interface ProjectCardProps {
   id: string;
@@ -73,7 +74,7 @@ export function ProjectCard({
           timer: 1500,
         });
         removeProject(id);
-        router.replace("/");
+        revalidatePath("/");
       }
     }
   };
