@@ -12,11 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil, ExternalLink } from "lucide-react";
 import { SiGithub } from "react-icons/si";
 import Swal from "sweetalert2";
-import { supabase } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { useProjectsStore } from "@/lib/stores/useProjectsStore";
-import { useEffect } from "react";
-import { revalidatePath } from "next/cache";
+import { deleteProjectAction } from "@/app/actions/delete-project";
 
 interface ProjectCardProps {
   id: string;
@@ -37,9 +33,6 @@ export function ProjectCard({
   demoUrl,
   repoUrl,
 }: ProjectCardProps) {
-  const router = useRouter();
-  const removeProject = useProjectsStore((state) => state.removeProject);
-
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: "¿Estás seguro?",
@@ -51,21 +44,8 @@ export function ProjectCard({
     });
 
     if (result.isConfirmed) {
-      // 1. Elimina la imagen del almacenamiento si existe
-      if (image) {
-        const match = image.match(/project-images\/([^?]+)/);
-        const filePath = match ? match[1] : null;
-        if (filePath) {
-          await supabase.storage.from("project-images").remove([filePath]);
-        }
-      }
-
-      // 2. Elimina el proyecto de la base de datos
-      const { error } = await supabase.from("projects").delete().eq("id", id);
-
-      if (error) {
-        Swal.fire("Error", "No se pudo eliminar el proyecto", "error");
-      } else {
+      try {
+        await deleteProjectAction(id, image);
         Swal.fire({
           title: "Eliminado",
           text: "El proyecto fue eliminado",
@@ -73,8 +53,8 @@ export function ProjectCard({
           showConfirmButton: false,
           timer: 1500,
         });
-        removeProject(id);
-        revalidatePath("/");
+      } catch (e) {
+        Swal.fire("Error", "No se pudo eliminar el proyecto", "error");
       }
     }
   };
