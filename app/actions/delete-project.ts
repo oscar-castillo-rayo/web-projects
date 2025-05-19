@@ -1,8 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { supabase } from "@/lib/supabase/server"; // Usa tu cliente server-side
+import { createServerSupabaseClient } from "@/lib/supabase/server"; // Usa tu factory server-side
 
 export async function deleteProjectAction(id: string, imageUrl?: string) {
+  const supabase = createServerSupabaseClient(); // Inicializa el cliente aquí
+
   // 1. Elimina la imagen si existe
   if (imageUrl) {
     const match = imageUrl.match(/project-images\/([^?]+)/);
